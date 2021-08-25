@@ -44,7 +44,7 @@ const actions = {
     },
     endEdit(state, title) {
         if(state.editIndex !== null) {
-            if(tilte) {
+            if(title) {
                 state.todos[state.editIndex].title = title
                 storage.set(state.todos)
             } else {
