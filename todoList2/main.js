@@ -1,24 +1,37 @@
 // Lưu dữ liệu vào LocalStorage
 const TODOS_STORAGE_KEY = 'TODOS'
 const storage = { 
+    //lấy ra được dữ liệu trong localStorage
     get() {
         return JSON.parse(localStorage.getItem(TODOS_STORAGE_KEY)) || []
     },
+    // Gán dữ liệu vào LocalStorage
+    //LocalStorage chỉ cho phép chúng ta lưu biến với kiểu String, vì vậy để lưu Object hoặc Array ta có thể convert sang Json.
     set(todos) {
-        localStorage.setItem(TODOS_STORAGE_KEY, JSON.stringify(todos))
+        localStorage.setItem(TODOS_STORAGE_KEY, JSON.stringify(todos))  
     }
 }
 
 // Dữ liệu mặc định của Store
-
+/*
 const init = {
-    todos: storage.get(),
+    todos: [
+        {
+            title: 'Learn',
+            completed: false,
+        }
+    ]
+}
+*/
+const init = {
+    todos: storage.get(),  // lấy dữ liệu từ localStorage
     filter: 'all',
     filters: {
         all: () => true,
         active: todo => !todo.completed,
         completed: todo => todo.completed
-    }
+    },
+    editIndex: null,
 }
 
 // Reducer()
@@ -26,7 +39,7 @@ const actions = {
     add({ todos }, title) {
         if(title) {
             todos.push({title, completed: false})
-            storage.set(todos)
+            storage.set(todos) // lưu dữ liệu vào LocalStorage
         }
     },
     toggle({ todos }, index) {
@@ -67,13 +80,14 @@ const actions = {
         state.editIndex = null
     }
 }
+// console.log(actions['add'])
 function reducer(state = init, action, args)  {
     actions[action] && actions[action](state, ...args)      
     return state
 }
 
 
-//logger: phần mềm trung gian
+//logger: phần mềm trung gian console
 function withLogger(reducer) {
     return (prevstate, action, args) => {
         console.group(action)
@@ -103,16 +117,17 @@ function createStore(reducer) {
     const roots = new Map()
     function render() {
         for(const [root, component] of roots) {
-            const output = component()
+            const output = component() //connect()(App)(....)
             root.innerHTML = output
         }
     }
     return {
+        //
         attach(component, root) {
             roots.set(root, component)
             render()
         },
-        connect(selector = state => state) {
+        connect(selector = state => state) { 
             return component => (props, ...args) => 
             component(Object.assign({}, props, selector(state), ...args))
         },
@@ -125,9 +140,9 @@ function createStore(reducer) {
 
 // Store
 const { attach, connect, dispatch} = createStore(withLogger(reducer))
+window.dispatch = dispatch
 
-
-//Html view
+//Html
 function Header() {
     return html`
         <header class="header">
@@ -150,7 +165,7 @@ function TodoItem({ todo, index, editIndex }) {
 
                 <button class="destroy" onclick="dispatch('destroy', ${index})"></button>
             </div>
-            
+
             <input class="edit" 
                 value="${todo.title}" onkeyup="event.keyCode === 13 && dispatch('endEdit', this.value.trim()) || event.keyCode === 27 && dispatch('canceEdit')"
                 onblur="dispatch('endEdit', this.value.trim())">
@@ -169,8 +184,7 @@ function TodoList({ todos, filter, filters }) {
             <label for="toggle-all">Mark all as complete</label>
 
             <ul class="todo-list">
-            ${todos.filter(filters[filter]).map((todo, index) => 
-                connect()(TodoItem)({ todo, index }))}
+                ${todos.filter(filters[filter]).map((todo, index) => connect()(TodoItem)({ todo, index }))}
             </ul>
 		</section>
     `
@@ -203,11 +217,11 @@ function Footer({ todos, filter, filters }) {
 }
 
 
-
+// View
 function App({ todos }) {
     return html`
         <section class="todoapp">
-            ${Header()}
+            ${connect()(Header)()}
             ${todos.length > 0 && connect()(TodoList)()}
             ${todos.length > 0 && connect()(Footer)()}
         </section>
